@@ -1,9 +1,11 @@
+#----------------------------------------------------------------------------------------------------------------#
 from error_analysis import err_cluster
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
 from scipy.stats import chi2_contingency
 from scipy.stats import kstest
 import numpy as np
+#----------------------------------------------------------------------------------------------------------------#
 
 class continuous_variable(err_cluster):
     def __init__(self, df, train_split_index, labels_column, model):
@@ -17,7 +19,7 @@ class continuous_variable(err_cluster):
     def mse(self):
         self.Error_analysis_train()    
         r2 = mean_squared_error(self.y_train, self.svm_pred)
-        print('r2 score for perfect model is', mean_squared_error)
+        print('r2 score for perfect model is', r2)
 
     def chi_square(self):
         self.Error_analysis_train()     
@@ -29,3 +31,5 @@ class continuous_variable(err_cluster):
     def Kolmogorov_Smirnov(self):
         self.Error_analysis_train()
         print(kstest(np.array(self.y_train), 'norm'))
+
+#----------------------------------------------------------------------------------------------------------------#

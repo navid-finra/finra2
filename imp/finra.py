@@ -68,6 +68,7 @@ Analysis_ = Analysis(df,train_split_index,labels_column,model)
 Sensitivity_Analysis_ = Sensitivity_Analysis_class(df,train_split_index,labels_column,model)
 Edge_case_ = edge_case(df,train_split_index,labels_column,model)
 continuous_variable_ = continuous_variable(df,train_split_index,labels_column,model)
+
 #----------------------------------------------------------------------------------------------------------------#
 
 if args.pca:

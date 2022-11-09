@@ -18,7 +18,6 @@ class err_cluster(cluster):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)
 
-    ##############################################################################################################
 
     def error_cluster(self):
         self.number_of_cluster()

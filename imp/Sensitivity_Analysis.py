@@ -10,7 +10,6 @@ class Sensitivity_Analysis_class(finra):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)
 
-#----------------------------------------------------------------------------------------------------------------#
   
     def Sensitivity_Analysis(self):
         interval= 40 #assumed

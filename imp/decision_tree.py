@@ -16,7 +16,6 @@ class decision_tree_class(err_cluster):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)
    
-#----------------------------------------------------------------------------------------------------------------#
   
     def decision_tree(self): 
         self.Error_analysis_test()

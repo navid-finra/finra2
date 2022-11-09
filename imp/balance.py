@@ -11,8 +11,6 @@ class balance(cluster):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)   
 
-#----------------------------------------------------------------------------------------------------------------#
-
     def Balance_check(self):
         self.number_of_cluster()
         train_df = pd.concat([self.x_train, self.y_train], axis=1).reset_index(drop = True) 

@@ -18,7 +18,6 @@ class feature_redundancy(finra):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)
 
-#----------------------------------------------------------------------------------------------------------------#
   
     def pca(self):
         plt.style.use('dark_background')

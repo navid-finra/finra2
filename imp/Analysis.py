@@ -1,5 +1,5 @@
 #----------------------------------------------------------------------------------------------------------------#
-from decision_tree import decision_tree
+from decision_tree import decision_tree_class
 #----------------------------------------------------------------------------------------------------------------#
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ from PyALE import ale
 from lime.lime_tabular import LimeTabularExplainer
 #----------------------------------------------------------------------------------------------------------------#
 
-class Analysis(decision_tree):
+class Analysis(decision_tree_class):
 
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)

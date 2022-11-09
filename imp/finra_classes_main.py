@@ -38,7 +38,6 @@ class cluster(finra):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)
 
-#----------------------------------------------------------------------------------------------------------------#
 
     def number_of_cluster(self):
         self.x_all = pd.concat([self.x_train, self.x_test], axis=0).reset_index(drop = True)

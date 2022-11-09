@@ -1,7 +1,9 @@
+#----------------------------------------------------------------------------------------------------------------#
 from finra_classes_main import finra    
 import logging
 import pandas as pd
-    
+#----------------------------------------------------------------------------------------------------------------#
+
 class  edge_case(finra):
     def __init__(self, df, train_split_index, labels_column, model):
         super().__init__(df, train_split_index, labels_column, model)   
@@ -48,3 +50,5 @@ class  edge_case(finra):
         edge_case_df.to_csv("./result/edge_case_df.csv")
         logging.debug(f'edge_case_percent = {len(edge_case_df) / (x_test.shape[0] * x_test.shape[1])}')
         logging.debug('-------------------------------------------------------------------------------')
+        
+#----------------------------------------------------------------------------------------------------------------#
