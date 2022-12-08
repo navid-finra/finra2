@@ -43,9 +43,11 @@ parser.add_argument('--Permutation_feature_importance', type=str)
 parser.add_argument('--Global_Surrogate', type=str)
 parser.add_argument('--LIME', type=str)
 parser.add_argument('--Sensitivity_Analysis', type=str)
-parser.add_argument('--Edge_case', type=str)
-parser.add_argument('--continuous_variable', type=str)
-
+parser.add_argument('--edge_case_analysis', type=str)
+parser.add_argument('--r2', type=str)
+parser.add_argument('--mse', type=str)
+parser.add_argument('--chi_square', type=str)
+parser.add_argument('--Kolmogorov_Smirnov', type=str)
 #----------------------------------------------------------------------------------------------------------------#
   
 args = parser.parse_args()
@@ -122,6 +124,9 @@ if args.Global_Surrogate:
 if args.LIME:
     Analysis_.LIME()
 
+if args.LIME:
+    Analysis_.shaply()
+
 if args.Sensitivity_Analysis:
     Sensitivity_Analysis_.Sensitivity_Analysis()
 
@@ -139,6 +144,7 @@ if args.chi_square:
 
 if args.Kolmogorov_Smirnov:
     continuous_variable_.Kolmogorov_Smirnov()
+
 #----------------------------------------------------------------------------------------------------------------#
 
 ### command for run 

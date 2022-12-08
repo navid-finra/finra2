@@ -36,7 +36,7 @@ class err_cluster(cluster):
             df_1 = test_df[test_df['cluster_group']==i]
             test_fraud.append(round(100*sum(df_1[self.labels_column])/sum(test_df[self.labels_column]),2))
         fig, ax = plt.subplots(figsize = (10, 5))
-        index = np.arange(10)
+        index = np.arange(cluster)
         bar_width = 0.35
         rects1 = plt.bar(index, train_fraud, bar_width, color='orange', label='train')
         rects2 = plt.bar(index + bar_width, test_fraud, bar_width, color='navy',label='test')
@@ -58,10 +58,9 @@ class err_cluster(cluster):
         plt.legend()
         plt.tight_layout()
         plt.savefig("./result/Frauds_in_train&test_clusters_plot2.jpg") 
-
         tr_ts_df2 = pd.DataFrame({'% train_frauds' : train_fraud, '%test_frauds' : test_fraud})
-        tr_ts_df2['number_of_sample_train'] = train_fraud * self.x_train
-        tr_ts_df2['number_of_sample_test'] = test_fraud * self.x_test
+        tr_ts_df2['number_of_sample_train'] = tr_ts_df2['% train_frauds'] * len(self.x_train)
+        tr_ts_df2['number_of_sample_test'] = tr_ts_df2['%test_frauds'] * len(self.x_test)
 
         tr_ts_df2.to_csv('./result/%frauds_in_clusters.csv')
 
@@ -240,7 +239,7 @@ class err_cluster(cluster):
         index = [func.__name__ for func in err_cluster.metrics_function_train_list]
         score_df1 = pd.DataFrame({"index":index ,"score" :train_score })
         self.svm_conf_mat.to_csv('./result/confusion_matrix_train.csv')
-        score_df1.to_csv('./result/score_test.csv')
+        score_df1.to_csv('./result/score_train.csv')
  
 #----------------------------------------------------------------------------------------------------------------#
 #-----------------------------                                                       ----------------------------#
@@ -258,7 +257,7 @@ class err_cluster(cluster):
 
         self.svm_conf_mat_test = svm_conf_mat_test
         self.svm_pred_test = svm_pred_test
-
+        self.x_all['cluster_group'] = self.cluster_group
         test_df = pd.concat([self.x_test, self.y_test], axis=1).reset_index(drop = True)
         test_df['cluster_group'] = self.x_all['cluster_group'][len(self.x_train):].reset_index(drop = True)
         self.tn, self.fp, self.fn, self.tp = confusion_matrix(self.y_test, svm_pred_test).ravel()

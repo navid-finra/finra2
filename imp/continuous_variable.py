@@ -19,11 +19,11 @@ class continuous_variable(err_cluster):
     def mse(self):
         self.Error_analysis_train()    
         r2 = mean_squared_error(self.y_train, self.svm_pred)
-        print('r2 score for perfect model is', r2)
+        print('mse score for perfect model is', r2)
 
     def chi_square(self):
         self.Error_analysis_train()     
-        data = [self.y_train.tolist(), self.svm_pred.tilist()]
+        data = [self.y_train.tolist(), self.svm_pred.tolist()]
         chi_square_dict = {'stats':chi2_contingency(data)[0], 'p':chi2_contingency(data)[1],'dof':chi2_contingency(data)[2],
         'expexted':chi2_contingency(data)[3]}
         print(chi_square_dict)

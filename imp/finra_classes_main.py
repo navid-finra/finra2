@@ -18,9 +18,9 @@ except :
 class finra:
 
     def __init__(self,df,train_split_index,labels_column,model):
-        self.train_df = df[df['split']=='train']
-        self.val_df = df[df['split']=='val']
-        self.test_df = df[df['split']=='test']
+        #self.train_df = df[df['split']=='train']
+        #self.val_df = df[df['split']=='val']
+        #self.test_df = df[df['split']=='test']
         
         self.x_train = df.iloc[:train_split_index, :].drop(columns = labels_column).reset_index(drop=True)
         self.y_train = df.iloc[:train_split_index, :][[labels_column]].reset_index(drop=True)

@@ -87,6 +87,8 @@ Analysis_.Global_Surrogate()
 
 Analysis_.LIME()
 
+Analysis_.shaply()
+
 Sensitivity_Analysis_.Sensitivity_Analysis()
 
 continuous_variable_.r2()

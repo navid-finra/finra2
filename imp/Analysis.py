@@ -12,6 +12,9 @@ from sklearn.inspection import PartialDependenceDisplay
 from sklearn.inspection import permutation_importance
 from PyALE import ale
 from lime.lime_tabular import LimeTabularExplainer
+from xgboost.sklearn import XGBRegressor
+import shap
+from sklearn.metrics import mean_squared_error
 #----------------------------------------------------------------------------------------------------------------#
 
 class Analysis(decision_tree_class):
@@ -141,4 +144,14 @@ class Analysis(decision_tree_class):
         explanation = explainer.explain_instance(X_observation.values[0], self.dt_clf.predict)
         explanation.show_in_notebook(show_table=True, show_all=False)
 
+#----------------------------------------------------------------------------------------------------------------#
+
+    def shaply(self):
+        xgb_model = XGBRegressor(n_estimators=1000, max_depth=10, learning_rate=0.001, random_state=0)
+        xgb_model.fit(self.x_train_dt, self.y_train_dt)
+        y_predict = xgb_model.predict(self.x_test_dt)
+        mean_squared_error(self.y_test_dt, y_predict)**(0.5)
+        explainer = shap.TreeExplainer(xgb_model)
+        shap_values = explainer.shap_values(self.x_train_dt)
+        shap.summary_plot(shap_values, features = self.x_train_dt, feature_names = self.x_train_dt.columns)
 #----------------------------------------------------------------------------------------------------------------#
