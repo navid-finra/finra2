@@ -58,5 +58,37 @@ class cluster(finra):
         self.optimum_number_of_cluster = normalize_slope.index([x for x in normalize_slope if x<0.02][0])
         km = KMeans(n_clusters = self.optimum_number_of_cluster, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
         self.cluster_group = km.fit_predict(data).tolist()
+        
+        
+    def df_info(self, df, labels_column) :
+         
+        ind = []
+        val = []
+        ind.append('features')
+        val.append(df.drop(columns = labels_column).shape[1])
+        ind.append('targets')
+        val.append(df[labels_column].shape[1])
+        ind.append('samples')
+        val.append(len(df))
+        ind.append('dimention')
+        val.append(str(df.shape))
+        ind.append('duplicated')
+        val.append(df.duplicated().sum())
+        ind.append('missing_values')
+        val.append(df.isnull().sum().sum())
+        ind.append('class_a_samples')
+        val.append(df.groupby(labels_column).size()[0])
+        ind.append('class_b_samples')
+        val.append(df.groupby(labels_column).size()[1])
+        ind.append('balance(class_a / class_b)')
+        val.append(df.groupby(labels_column).size()[0] / df.groupby(labels_column).size()[1])
+        rep_df = pd.DataFrame({"ind" : ind, "val" : val})
+        return(rep_df)         
+        
 
 #----------------------------------------------------------------------------------------------------------------#
+
+
+
+
+
