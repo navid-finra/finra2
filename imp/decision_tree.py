@@ -39,8 +39,11 @@ class decision_tree_class(err_cluster):
         test_df = pd.concat([test_df, model_df_test], axis=1)
         new_df = pd.concat([train_df, test_df], axis=0).reset_index(drop =True)
         new_df['fn_error'] = None
+        new_df = new_df[new_df['pred_label'] == 0].reset_index(drop =True)
+
         for r in range(len(new_df)) :
-            if ((new_df[train_df.columns[-2]][r] == 1) and (new_df.pred_label[r] == 0)) :
+            
+            if ((new_df[train_df.columns[-2]][r] == 1)) :
                 new_df.fn_error[r] = 1
             else :
                 new_df.fn_error[r] = 0
