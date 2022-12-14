@@ -17,6 +17,7 @@ class  edge_case(finra):
         binary_feats = [col for col in x_train if 
                     x_train[col].dropna().value_counts().index.isin([0,1]).all()]
         num_feats = x_train.drop(columns = binary_feats).columns
+        print(f'x_test_shape : {x_test.shape}\n')
         #  epsilon for edge case
         eps = 0.1
         edge_df = pd.DataFrame()
@@ -39,11 +40,11 @@ class  edge_case(finra):
 
         edge_df['edge_case_up'] = edge_df['pred_label'] != edge_df['pred_label_up']
         edge_df['edge_case_down'] = edge_df['pred_label'] != edge_df['pred_label_down']
-        print(f'all_edge_cases = {(sum(edge_df.edge_case_up) + sum(edge_df.edge_case_down)) / (x_test.shape[0] * x_test.shape[1]) } %')
+        print(f'all_edge_cases = {(sum(edge_df.edge_case_up) + sum(edge_df.edge_case_down)) / ((x_test.shape[0] * x_test.shape[1])+0.1) } %')
         edge_df_pos = edge_df[edge_df.pred_label == 1]
-        print(f'pos_edge_cases = {(sum(edge_df_pos.edge_case_up) + sum(edge_df_pos.edge_case_down)) / (edge_df_pos.shape[0] * edge_df_pos.shape[1]) } %')
+        print(f'pos_edge_cases = {(sum(edge_df_pos.edge_case_up) + sum(edge_df_pos.edge_case_down)) / ((edge_df_pos.shape[0] * edge_df_pos.shape[1])+0.1) } %')
         edge_df_neg = edge_df[edge_df.pred_label == 0]
-        print(f'neg_edge_cases = {(sum(edge_df_neg.edge_case_up) + sum(edge_df_neg.edge_case_down)) / (edge_df_neg.shape[0] * edge_df_neg.shape[1]) } %\n\n\n')
+        print(f'neg_edge_cases = {(sum(edge_df_neg.edge_case_up) + sum(edge_df_neg.edge_case_down)) / ((edge_df_neg.shape[0] * edge_df_neg.shape[1])+0.1) } %\n\n\n')
 
         up_edge_cases_features = pd.DataFrame(edge_df[edge_df.edge_case_up == True].groupby("features").size(), columns = ['#']).sort_values('#', ascending=False)
         print(f'up_edge_cases_features : \n{up_edge_cases_features}\n\n\n')
