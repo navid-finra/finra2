@@ -4,6 +4,7 @@ from decision_tree import decision_tree_class
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from tabulate import tabulate
 #----------------------------------------------------------------------------------------------------------------#
 from imblearn.over_sampling import SMOTE 
 from sklearn.model_selection import train_test_split
@@ -15,21 +16,35 @@ from lime.lime_tabular import LimeTabularExplainer
 from xgboost.sklearn import XGBRegressor
 import shap
 from sklearn.metrics import mean_squared_error
+import shap
 #----------------------------------------------------------------------------------------------------------------#
 
 class Analysis(decision_tree_class):
+    def __init__(self,x_train,x_test,y_train,y_test,model):
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
 
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)
+        self.Error_analysis(self.x_train, self.y_train)
+        model_pred = self.model_pred
+        self.model_pred = model_pred
+        self.Error_analysis(self.x_test, self.y_test)
+        model_pred_test = self.model_pred
+        self.model_pred_test = model_pred_test    
 
-        self.Error_analysis_test()
-        self.Error_analysis_train()
+#----------------------------------------------------------------------------------------------------------------#
+
+    def Decision_model(self):
+
         train_df =  pd.concat([self.x_train.reset_index(drop =True), self.y_train.reset_index(drop =True)], axis=1)
-        svm_df_train = pd.DataFrame(self.svm_pred, columns = ['pred_label']).reset_index(drop =True)
-        train_df = pd.concat([train_df, svm_df_train], axis=1)
+        model_df_train = pd.DataFrame(self.model_pred, columns = ['pred_label']).reset_index(drop =True)
+        train_df = pd.concat([train_df, model_df_train], axis=1)
         test_df =  pd.concat([self.x_test.reset_index(drop =True), self.y_test.reset_index(drop =True)], axis=1)
-        svm_df_test = pd.DataFrame(self.svm_pred_test, columns = ['pred_label']).reset_index(drop =True)
-        test_df = pd.concat([test_df, svm_df_test], axis=1)
+        model_df_test = pd.DataFrame(self.model_pred_test, columns = ['pred_label']).reset_index(drop =True)
+        test_df = pd.concat([test_df, model_df_test], axis=1)
         new_df = pd.concat([train_df, test_df], axis=0).reset_index(drop =True)
         new_df['fn_error'] = None
         for r in range(len(new_df)) :
@@ -44,16 +59,6 @@ class Analysis(decision_tree_class):
         sm = SMOTE(random_state=42)
         x_blnc, y_blnc = sm.fit_resample(x_new, y_new)
         self.x_train_dt, self.x_test_dt, self.y_train_dt, self.y_test_dt = train_test_split(x_blnc, y_blnc, train_size = 0.7, random_state = 42)
-        # List of values to try for max_depth:
-        max_depth_range = list(range(1, 15))
-        # List to store the accuracy for each value of max_depth:
-        test_accuracy = []
-        for depth in max_depth_range:
-
-            dt_clf = DecisionTreeClassifier(max_depth = depth, random_state = 0)
-            dt_clf.fit(self.x_train_dt, self.y_train_dt)
-            score = dt_clf.score(self.x_test_dt, self.y_test_dt)
-            test_accuracy.append(score)
 
         self.dt_clf = DecisionTreeClassifier(max_depth = 6, random_state = 0)
         self.dt_clf.fit(self.x_train_dt, self.y_train_dt)
@@ -61,27 +66,45 @@ class Analysis(decision_tree_class):
 #----------------------------------------------------------------------------------------------------------------#
 
     def PDP(self):
+        self.Decision_model()
         importances = pd.DataFrame({'feature':self.x_train_dt.columns,'importance':np.round(self.dt_clf.feature_importances_,3)})
         importances = importances.sort_values('importance',ascending=False)
         features = importances.feature[:2].tolist()
-        PartialDependenceDisplay.from_estimator(self.dt_clf,
-                                       X = self.x_train_dt,
-                                       features = features, 
-                                       target=0)
-        plt.savefig("./result/PDP_plot.jpg")
+
+        shap.plots.partial_dependence(
+            features[1], self.dt_clf.predict, X = self.x_train_dt, ice=False, pd_linewidth = 3, show=False
+        )
+
+        plt.savefig(f"./result/PDP_plot_{features[0]}.jpg")
+
+        shap.plots.partial_dependence(
+            features[0], self.dt_clf.predict, X = self.x_train_dt, ice=False, pd_linewidth = 3, show=False
+        )
+
+        plt.savefig(f"./result/PDP_plot_{features[1]}.jpg")
     
 #----------------------------------------------------------------------------------------------------------------#
 
     def ICE(self):
+        self.Decision_model()
         importances = pd.DataFrame({'feature':self.x_train_dt.columns,'importance':np.round(self.dt_clf.feature_importances_,3)})
         importances = importances.sort_values('importance',ascending=False)
         features = importances.feature[:2].tolist()
         PartialDependenceDisplay.from_estimator(self.dt_clf, self.x_train_dt, features ,kind='individual')
-        plt.savefig("./result/ICE_plot.jpg")
+        shap.plots.partial_dependence(
+            features[0], self.dt_clf.predict, self.x_train_dt, ice=True, ace_opacity=0.8, pd_linewidth = 3, show = False
+        )
+        plt.savefig(f"./result/ICE_plot_{features[1]}.jpg")
+
+        shap.plots.partial_dependence(
+            features[0], self.dt_clf.predict, self.x_train_dt, ice=True, ace_opacity=0.8, pd_linewidth = 3, show = False
+        )
+        plt.savefig(f"./result/ICE_plot_{features[1]}.jpg")
 
 #----------------------------------------------------------------------------------------------------------------#    
 
     def ALE(self):
+        self.Decision_model()
         importances = pd.DataFrame({'feature':self.x_train_dt.columns,'importance':np.round(self.dt_clf.feature_importances_,3)})
         importances = importances.sort_values('importance',ascending=False)
         features = importances.feature[:2].tolist()
@@ -93,6 +116,7 @@ class Analysis(decision_tree_class):
 #----------------------------------------------------------------------------------------------------------------#
 
     def Permutation_feature_importance(self):
+        self.Decision_model()
         r = permutation_importance(self.dt_clf, self.x_train_dt, self.y_train_dt,
                            n_repeats=30,
                            random_state=0)
@@ -106,10 +130,13 @@ class Analysis(decision_tree_class):
                 column_value.append(f"{r.importances_mean[i]:.3f} +/- {r.importances_std[i]:.3f}")
         Permutation_feature_importance_df = pd.DataFrame({'feature':column_name , 'value':column_value})
         Permutation_feature_importance_df.to_csv('./result/Permutation_feature_importance.csv') 
-
+        print('-------- Permutation feature importance --------')
+        print(tabulate(Permutation_feature_importance_df, headers = 'keys', tablefmt = 'psql'), '\n')
+        
 #----------------------------------------------------------------------------------------------------------------#
 
     def Global_Surrogate(self):
+        self.Decision_model()
         new_target = self.dt_clf.predict(self.x_train_dt)
 
         # defining the interpretable decision tree model
@@ -121,6 +148,7 @@ class Analysis(decision_tree_class):
 #----------------------------------------------------------------------------------------------------------------#
 
     def LIME(self):
+        self.Decision_model()
         explainer = LimeTabularExplainer(self.x_train_dt.values, mode="regression", feature_names=self.x_train_dt.columns)
         r = permutation_importance(self.dt_clf, self.x_train_dt, self.y_train_dt,
                            n_repeats=30,
@@ -147,6 +175,7 @@ class Analysis(decision_tree_class):
 #----------------------------------------------------------------------------------------------------------------#
 
     def shaply(self):
+        self.Decision_model()
         xgb_model = XGBRegressor(n_estimators=1000, max_depth=10, learning_rate=0.001, random_state=0)
         xgb_model.fit(self.x_train_dt, self.y_train_dt)
         y_predict = xgb_model.predict(self.x_test_dt)
@@ -154,4 +183,5 @@ class Analysis(decision_tree_class):
         explainer = shap.TreeExplainer(xgb_model)
         shap_values = explainer.shap_values(self.x_train_dt)
         shap.summary_plot(shap_values, features = self.x_train_dt, feature_names = self.x_train_dt.columns)
+
 #----------------------------------------------------------------------------------------------------------------#

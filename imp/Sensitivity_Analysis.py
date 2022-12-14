@@ -1,14 +1,16 @@
 #----------------------------------------------------------------------------------------------------------------#
-from finra_classes_main import finra
-#----------------------------------------------------------------------------------------------------------------#
 import pandas as pd
 import numpy as np
 #----------------------------------------------------------------------------------------------------------------#
 
-class Sensitivity_Analysis_class(finra):
-
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)
+class Sensitivity_Analysis_class:
+    def __init__(self,x_train,x_test,y_train,y_test,model):
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
 
   
     def Sensitivity_Analysis(self):

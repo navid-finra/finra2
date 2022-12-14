@@ -16,52 +16,71 @@ except :
 #----------------------------------------------------------------------------------------------------------------#
 
 class finra:
-
-    def __init__(self,df,train_split_index,labels_column,model):
+    def __init__(self,x_train,x_test,y_train,y_test,model):
         #self.train_df = df[df['split']=='train']
         #self.val_df = df[df['split']=='val']
         #self.test_df = df[df['split']=='test']
         
-        self.x_train = df.iloc[:train_split_index, :].drop(columns = labels_column).reset_index(drop=True)
-        self.y_train = df.iloc[:train_split_index, :][[labels_column]].reset_index(drop=True)
-        self.x_test = df.iloc[train_split_index : , :].drop(columns = labels_column).reset_index(drop=True)
-        self.y_test = df.iloc[train_split_index: , :][[labels_column]].reset_index(drop=True)
-        self.df = df
+        #self.x_train = df.iloc[:train_split_index, :].drop(columns = labels_column).reset_index(drop=True)
+        #self.y_train = df.iloc[:train_split_index, :][[labels_column]].reset_index(drop=True)
+        #self.x_test = df.iloc[train_split_index : , :].drop(columns = labels_column).reset_index(drop=True)
+        #self.y_test = df.iloc[train_split_index: , :][[labels_column]].reset_index(drop=True)
+        #self.df = df
+        #self.model = model
+        #self.labels_column = labels_column
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
         self.model = model
-        self.labels_column = labels_column
+
 
 
 #----------------------------------------------------------------------------------------------------------------#
 
-class cluster(finra):
+class cluster:
+    def __init__(self,x_train,x_test,y_train,y_test,model):
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
 
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)
 
 
     def number_of_cluster(self):
-        self.x_all = pd.concat([self.x_train, self.x_test], axis=0).reset_index(drop = True)
-        data = np.array(self.x_all).reshape(-1, self.x_all.shape[1])
+        df_all = pd.concat([self.x_train, self.x_test])
+        data = np.array(df_all).reshape(-1, df_all.shape[1])
         mms = MinMaxScaler()
         mms.fit(data)
         data_transformed = mms.transform(data)
-        Sum_of_squared_distances = []
-        K = range(1,15)
-        for k in K:
-            km = KMeans(n_clusters=k)
-            km = km.fit(data_transformed)
-            Sum_of_squared_distances.append(km.inertia_)
-        slope = []
-        for i in range(len(Sum_of_squared_distances)-1):
-            slope.append(round(Sum_of_squared_distances[i]-Sum_of_squared_distances[i+1],2))
-        normalize_slope = [round(x,2) for x in preprocessing.normalize([np.array(slope)])[0]]
-        self.optimum_number_of_cluster = normalize_slope.index([x for x in normalize_slope if x<0.02][0])
-        km = KMeans(n_clusters = self.optimum_number_of_cluster, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
-        self.cluster_group = km.fit_predict(data).tolist()
-        
-        
+        if np.isnan(data_transformed).sum()>0:
+            print(f'the combine data contains {np.isnan(data_transformed).sum()} nan values')
+        else:
+            Sum_of_squared_distances = []
+            K = range(1,15)
+            for k in K:
+                km = KMeans(n_clusters=k)
+                km = km.fit(data_transformed)
+                Sum_of_squared_distances.append(km.inertia_)
+            slope = []
+            for i in range(len(Sum_of_squared_distances)-1):
+                slope.append(round(Sum_of_squared_distances[i]-Sum_of_squared_distances[i+1],2))
+            normalize_slope = [round(x,2) for x in preprocessing.normalize([np.array(slope)])[0]]
+
+            try:
+                optimum_number_of_cluster = normalize_slope.index([x for x in normalize_slope if x<0.02][0])
+                km = KMeans(n_clusters = optimum_number_of_cluster, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
+                cluster_group = km.fit_predict(data).tolist()
+                return cluster_group
+            except:
+                print('The tolerance value is very low, please increase the tolerance')   
+
+
     def df_info(self, df, labels_column) :
-         
+        
         ind = []
         val = []
         ind.append('features')
@@ -83,12 +102,5 @@ class cluster(finra):
         ind.append('balance(class_a / class_b)')
         val.append(df.groupby(labels_column).size()[0] / df.groupby(labels_column).size()[1])
         rep_df = pd.DataFrame({"ind" : ind, "val" : val})
-        return(rep_df)         
-        
-
+        return(rep_df)   
 #----------------------------------------------------------------------------------------------------------------#
-
-
-
-
-

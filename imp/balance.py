@@ -1,18 +1,20 @@
 #----------------------------------------------------------------------------------------------------------------#
-from finra_classes_main import cluster
-#----------------------------------------------------------------------------------------------------------------#
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from tabulate import tabulate
 #----------------------------------------------------------------------------------------------------------------#
 
-class balance(cluster):
-
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)   
+class balance:
+    def __init__(self,x_train,x_test,y_train,y_test,model):
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
 
     def Balance_check(self):
-        self.number_of_cluster()
         train_df = pd.concat([self.x_train, self.y_train], axis=1).reset_index(drop = True) 
         test_df = pd.concat([self.x_test, self.y_test], axis=1).reset_index(drop = True)
         train_frauds = (sum(train_df[self.labels_column])/len(train_df))*100
@@ -36,5 +38,6 @@ class balance(cluster):
 
         tr_ts_df = pd.DataFrame({'train' : train_per, 'test' : test_per})
         tr_ts_df.to_csv('./result/balance_check.csv')
+        print(tabulate(tr_ts_df, headers = 'keys', tablefmt = 'psql'))
 
 #----------------------------------------------------------------------------------------------------------------#

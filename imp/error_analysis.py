@@ -4,23 +4,33 @@ from finra_classes_main import cluster
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from tabulate import tabulate
 #----------------------------------------------------------------------------------------------------------------#
-from sklearn.metrics import recall_score, precision_score, f1_score, cohen_kappa_score
+from sklearn.metrics import recall_score, precision_score, cohen_kappa_score, f1_score
 from sklearn.metrics import confusion_matrix, roc_auc_score, balanced_accuracy_score
-from sklearn.metrics import fbeta_score, matthews_corrcoef, average_precision_score
-from sklearn.metrics import log_loss, brier_score_loss, top_k_accuracy_score
-from sklearn.metrics import brier_score_loss, jaccard_score
+from sklearn.metrics import fbeta_score, matthews_corrcoef, average_precision_score, log_loss
+from sklearn.metrics import brier_score_loss, top_k_accuracy_score, jaccard_score
 from scikitplot.helpers import binary_ks_curve
 #----------------------------------------------------------------------------------------------------------------#
 
-class err_cluster(cluster):
+class err_cluster:
 
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)
+    def __init__(self,x_train,x_test,y_train,y_test,model):
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
 
+        cluster_class = cluster(x_train,y_train,x_test,y_test,model)
+
+        self.cluster_group = cluster_class.number_of_cluster()
+        self.optimum_number_of_cluster = max(self.cluster_group)
+
+#----------------------------------------------------------------------------------------------------------------#
 
     def error_cluster(self):
-        self.number_of_cluster()
         self.x_all['cluster_group'] = self.cluster_group
         train_df = pd.concat([self.x_train, self.y_train], axis=1).reset_index(drop = True) 
         test_df = pd.concat([self.x_test, self.y_test], axis=1).reset_index(drop = True)
@@ -29,6 +39,7 @@ class err_cluster(cluster):
         cluster = self.optimum_number_of_cluster
         train_fraud = []
         test_fraud = []
+
         for i in range(cluster):
             df_1 = train_df[train_df['cluster_group']==i]
             train_fraud.append(round(100*sum(df_1[self.labels_column])/sum(train_df[self.labels_column]),2))
@@ -63,363 +74,211 @@ class err_cluster(cluster):
         tr_ts_df2['number_of_sample_test'] = tr_ts_df2['%test_frauds'] * len(self.x_test)
 
         tr_ts_df2.to_csv('./result/%frauds_in_clusters.csv')
+        print('-------- frauds in clusters --------')
+        print(tabulate(tr_ts_df2, headers = 'keys', tablefmt = 'psql'), '\n')
 
 #----------------------------------------------------------------------------------------------------------------#
-#-----------------------------                                                       ----------------------------#
-#-----------------------------                      TRAIN STEP                       ----------------------------#
-#-----------------------------                                                       ----------------------------#
-#----------------------------------------------------------------------------------------------------------------#
 
-    def Error_analysis_train(self):
-        self.number_of_cluster()
-        #train step
+    def Error_analysis(self,x,y):
         np.random.seed(31)
-        svm_model = self.model 
-        svm_model.fit(self.x_train)
-        svm_pred = svm_model.predict(self.x_train)
-        svm_pred = pd.Series(svm_pred).replace([-1,1],[1,0])
-        svm_conf_mat = pd.DataFrame(confusion_matrix(self.y_train, svm_pred))
+        self.model.fit(x)
+        model_pred = self.model.predict(x)
+        model_pred = pd.Series(model_pred).replace([-1,1],[1,0])
+        model_conf_mat = pd.DataFrame(confusion_matrix(y, model_pred))
 
-        self.svm_conf_mat = svm_conf_mat
-        self.svm_pred = svm_pred
+        self.model_conf_mat = model_conf_mat
+        self.model_pred = model_pred
 
         self.x_all['cluster_group'] = self.cluster_group
-        train_df = pd.concat([self.x_train, self.y_train], axis=1).reset_index(drop = True)
-        train_df['cluster_group'] = self.x_all['cluster_group'][:len(self.x_train)].reset_index(drop = True)
+        x_df = pd.concat([x, y], axis=1).reset_index(drop = True)
+        x_df['cluster_group'] = self.x_all['cluster_group'][:len(x)].reset_index(drop = True)
 
-        self.tn, self.fp, self.fn, self.tp = confusion_matrix(self.y_train, svm_pred).ravel()
-        y_df_train = pd.DataFrame(self.y_train).reset_index(drop = True)
-        y_df_train['pred_label'] = self.svm_pred
-
-        clusters = train_df.cluster_group.reset_index()
-        y_df_train['cluster_group'] = clusters.cluster_group
-        per_error_train = []
+        self.tn, self.fp, self.fn, self.tp = confusion_matrix(y, model_pred).ravel()
+        y_df = pd.DataFrame(y).reset_index(drop = True)
+        y_df['pred_label'] = self.model_pred
+        clusters = x_df.cluster_group.reset_index()
+        y_df['cluster_group'] = clusters.cluster_group
+        per_error = []
         for j in range(self.optimum_number_of_cluster):
-            df4 = y_df_train[y_df_train.cluster_group == j]
-            fr_df = df4[df4[train_df.columns[-2]] == 1]
-            real = max(len(fr_df[train_df.columns[-2]]) , 1)
+            df4 = y_df[y_df.cluster_group == j]
+            fr_df = df4[df4[x_df.columns[-2]] == 1]
+            real = max(len(fr_df[x_df.columns[-2]]) , 1)
             err = len(fr_df[fr_df.pred_label == 0])
-            per_error_train.append(100*err/real)
+            per_error.append(100*err/real)
     
-        self.per_error_train = per_error_train
+        self.per_error = per_error
 
 #----------------------------------------------------------------------------------------------------------------#
 
-    def accuracy_train(self):
-        self.Error_analysis_train()
+    def accuracy(self,x,y):
+        self.Error_analysis(x,y)
         return((self.tp + self.tn) / (self.tp + self.fp + self.fn + self.tn))
 
 #----------------------------------------------------------------------------------------------------------------#
 
-    def recall_score_train(self):
-        self.Error_analysis_train()
-        return(recall_score(self.y_train, self.svm_pred)) 
+    def recall_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(recall_score(y, self.model_pred)) 
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def precision_score_train(self):
-        self.Error_analysis_train()
-        return(precision_score(self.y_train, self.svm_pred))
+    def precision_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(precision_score(y, self.model_pred))
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def f1_score_train(self):
-        self.Error_analysis_train()
-        return(f1_score(self.y_train, self.svm_pred)) 
+    def f1_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(f1_score(y, self.model_pred)) 
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def f2_score_train(self):
-        self.Error_analysis_train()
-        return(fbeta_score(self.y_train, self.svm_pred, beta = 2))
+    def f2_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(fbeta_score(y, self.model_pred, beta = 2))
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def cohen_kappa_score_train(self):
-        self.Error_analysis_train()
-        return(cohen_kappa_score(self.y_train, self.svm_pred))
+    def cohen_kappa_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(cohen_kappa_score(y, self.model_pred))
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def roc_auccuracy_score_train(self):
-        self.Error_analysis_train()
-        return(roc_auc_score(self.y_train, self.svm_pred))
+    def roc_auccuracy_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(roc_auc_score(y, self.model_pred))
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def false_positive_rate_train(self):
-        self.Error_analysis_train()
+    def false_positive_rate(self,x,y):
+        self.Error_analysis(x,y)
         return(self.fp / (self.fp + self.tn))
 
 #----------------------------------------------------------------------------------------------------------------#
     
-    def false_negative_rate_train(self):
-        self.Error_analysis_train()
+    def false_negative_rate(self,x,y):
+        self.Error_analysis(x,y)
         return(self.fn / (self.tp + self.fn))
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def true_negative_rate_train(self):
-        self.Error_analysis_train()
+    def true_negative_rate(self,x,y):
+        self.Error_analysis(x,y)
         return(self.tn / (self.tn + self.fp))
 
 #----------------------------------------------------------------------------------------------------------------#
         
-    def negative_predictive_value_train(self):
-        self.Error_analysis_train()
+    def negative_predictive_value(self,x,y):
+        self.Error_analysis(x,y)
         return(self.tn/ (self.tn + self.fn))
  
 #----------------------------------------------------------------------------------------------------------------#
        
-    def false_discovery_rate_train(self):
-        self.Error_analysis_train()
+    def false_discovery_rate(self,x,y):
+        self.Error_analysis(x,y)
         return(self.fp/ (self.tp + self.fp))
   
 #----------------------------------------------------------------------------------------------------------------#
    
-    def matthews_corr_train(self):
-        self.Error_analysis_train()
-        return(matthews_corrcoef(self.y_train, self.svm_pred))
+    def matthews_corr(self,x,y):
+        self.Error_analysis(x,y)
+        return(matthews_corrcoef(y, self.model_pred))
    
 #----------------------------------------------------------------------------------------------------------------#
   
-    def avg_precision_train(self):
-        self.Error_analysis_train()
-        return(average_precision_score(self.y_train, self.svm_pred))
+    def avg_precision(self,x,y):
+        self.Error_analysis(x,y)
+        return(average_precision_score(y, self.model_pred))
   
 #----------------------------------------------------------------------------------------------------------------#
    
-    def log_loss_train(self):
-        self.Error_analysis_train()
-        return(log_loss(self.y_train, self.svm_pred))
+    def log_loss(self,x,y):
+        self.Error_analysis(x,y)
+        return(log_loss(y, self.model_pred))
  
 #----------------------------------------------------------------------------------------------------------------#
 
-    def brier_score_loss_train(self):
-        self.Error_analysis_train()
-        return(brier_score_loss(self.y_train, self.svm_pred))
+    def brier_score_loss(self,x,y):
+        self.Error_analysis(x,y)
+        return(brier_score_loss(y, self.model_pred))
    
 #----------------------------------------------------------------------------------------------------------------#
   
-    def binary_ks_curve_train(self):
-        self.Error_analysis_train()
-        res = binary_ks_curve(self.y_train, self.svm_pred)
+    def binary_ks_curve(self,x,y):
+        self.Error_analysis(x,y)
+        res = binary_ks_curve(y, self.model_pred)
         return(res[3])  
    
 #----------------------------------------------------------------------------------------------------------------#
   
-    def balanced_accuracy_score_train(self):      
-        return(balanced_accuracy_score(self.y_train, self.svm_pred))
+    def balanced_accuracy_score(self,x,y):
+        self.Error_analysis(x,y)      
+        return(balanced_accuracy_score(y, self.model_pred))
    
 #----------------------------------------------------------------------------------------------------------------#
   
-    def top_k_accuracy_score_train(self):
-        self.Error_analysis_train()
-        return(top_k_accuracy_score(self.y_train, self.svm_pred, k=2))
+    def top_k_accuracy_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(top_k_accuracy_score(y, self.model_pred, k=2))
    
 #----------------------------------------------------------------------------------------------------------------#
   
-    def jaccard_score_train(self):
-        self.Error_analysis_train()
-        return(jaccard_score(self.y_train, self.svm_pred))
+    def jaccard_score(self,x,y):
+        self.Error_analysis(x,y)
+        return(jaccard_score(y, self.model_pred))
  
 #----------------------------------------------------------------------------------------------------------------#
 
-    metrics_function_train_list = [accuracy_train,recall_score_train,precision_score_train,f1_score_train,f2_score_train,
-        cohen_kappa_score_train,roc_auccuracy_score_train,false_positive_rate_train,false_negative_rate_train,
-        true_negative_rate_train,negative_predictive_value_train,false_discovery_rate_train,matthews_corr_train,
-        avg_precision_train,log_loss_train,brier_score_loss_train,binary_ks_curve_train,balanced_accuracy_score_train,
-        top_k_accuracy_score_train,jaccard_score_train]
+    metrics_function_list = [accuracy,recall_score,precision_score,f1_score,f2_score,
+        cohen_kappa_score,roc_auccuracy_score,false_positive_rate,false_negative_rate,
+        true_negative_rate,negative_predictive_value,false_discovery_rate,matthews_corr,
+        avg_precision,log_loss,brier_score_loss,binary_ks_curve,balanced_accuracy_score,
+        top_k_accuracy_score,jaccard_score]
  
 #----------------------------------------------------------------------------------------------------------------#
-
+    
     def train_score(self):
-        self.Error_analysis_train()
-        train_score = [func(self) for func in err_cluster.metrics_function_train_list]
-        index = [func.__name__ for func in err_cluster.metrics_function_train_list]
+        x = self.x_train
+        y = self.y_train
+        self.Error_analysis(x,y)
+        train_score = [func(self,x,y) for func in err_cluster.metrics_function_list]
+        index = [func.__name__ for func in err_cluster.metrics_function_list]
         score_df1 = pd.DataFrame({"index":index ,"score" :train_score })
-        self.svm_conf_mat.to_csv('./result/confusion_matrix_train.csv')
+        self.model_conf_mat.to_csv('./result/confusion_matrix_train.csv')
         score_df1.to_csv('./result/score_train.csv')
+        print('-------- test score --------')
+        print(tabulate(score_df1, headers = 'keys', tablefmt = 'psql'), '\n')
  
-#----------------------------------------------------------------------------------------------------------------#
-#-----------------------------                                                       ----------------------------#
-#-----------------------------                      TEST STEP                        ----------------------------#
-#-----------------------------                                                       ----------------------------#
-#----------------------------------------------------------------------------------------------------------------#
-
-    def Error_analysis_test(self):
-        self.number_of_cluster()
-        svm_model = self.model
-        svm_model.fit(self.x_test)
-        svm_pred_test = svm_model.predict(self.x_test)
-        svm_pred_test = pd.Series(svm_pred_test).replace([-1,1],[1,0])
-        svm_conf_mat_test = pd.DataFrame(confusion_matrix(self.y_test, svm_pred_test))
-
-        self.svm_conf_mat_test = svm_conf_mat_test
-        self.svm_pred_test = svm_pred_test
-        self.x_all['cluster_group'] = self.cluster_group
-        test_df = pd.concat([self.x_test, self.y_test], axis=1).reset_index(drop = True)
-        test_df['cluster_group'] = self.x_all['cluster_group'][len(self.x_train):].reset_index(drop = True)
-        self.tn, self.fp, self.fn, self.tp = confusion_matrix(self.y_test, svm_pred_test).ravel()
-        y_df_test = pd.DataFrame(self.y_test).reset_index(drop = True)
-        y_df_test['pred_label'] = svm_pred_test
-        clusters = test_df.cluster_group.reset_index()
-        y_df_test['cluster_group'] = clusters.cluster_group
-        per_error_test = []
-        for j in range(self.optimum_number_of_cluster):
-            df5 = y_df_test[y_df_test.cluster_group == j]
-            fr_df = df5[df5[test_df.columns[-2]] == 1]
-            real = max(len(fr_df[test_df.columns[-2]]) , 1)
-            err = len(fr_df[fr_df.pred_label == 0]) 
-            per_error_test.append(100*err/real)
-        self.per_error_test = per_error_test
- 
-#----------------------------------------------------------------------------------------------------------------#
-
-    def accuracy_test(self):
-        self.Error_analysis_test()
-        return((self.tp + self.tn) / (self.tp + self.fp + self.fn + self.tn))
-  
-#----------------------------------------------------------------------------------------------------------------#
-   
-    def recall_score_test(self):
-        self.Error_analysis_test()
-        return(recall_score(self.y_test, self.svm_pred_test)) 
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def precision_score_test(self):
-        self.Error_analysis_test()
-        return(precision_score(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def f1_score_test(self):
-        self.Error_analysis_test()
-        return(f1_score(self.y_test, self.svm_pred_test)) 
-    
-#----------------------------------------------------------------------------------------------------------------#
- 
-    def f2_score_test(self):
-        self.Error_analysis_test()
-        return(fbeta_score(self.y_test, self.svm_pred_test, beta = 2))
-  
-#----------------------------------------------------------------------------------------------------------------#
-   
-    def cohen_kappa_score_test(self):
-        self.Error_analysis_test()
-        return(cohen_kappa_score(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def roc_auccuracy_score_test(self):
-        self.Error_analysis_test()
-        return(roc_auc_score(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def false_positive_rate_test(self):
-        self.Error_analysis_test()
-        return(self.fp / (self.fp + self.tn))
-    
-#----------------------------------------------------------------------------------------------------------------#
- 
-    def false_negative_rate_test(self):
-        self.Error_analysis_test()
-        return(self.fn / (self.tp + self.fn))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def true_negative_rate_test(self):
-        self.Error_analysis_test()
-        return(self.tn / (self.tn + self.fp))
-  
-#----------------------------------------------------------------------------------------------------------------#
-   
-    def negative_predictive_value_test(self):
-        self.Error_analysis_test()
-        return(self.tn/ (self.tn + self.fn))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def false_discovery_rate_test(self):
-        self.Error_analysis_test()
-        return(self.fp/ (self.tp + self.fp))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def matthews_corr_test(self):
-        self.Error_analysis_test()
-        return(matthews_corrcoef(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def avg_precision_test(self):
-        self.Error_analysis_test()
-        return(average_precision_score(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def log_loss_test(self):
-        self.Error_analysis_test()
-        return(log_loss(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def brier_score_loss_test(self):
-        self.Error_analysis_test()
-        return(brier_score_loss(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def binary_ks_curve_test(self):
-        self.Error_analysis_test()
-        res = binary_ks_curve(self.y_test, self.svm_pred_test)
-        return(res[3])  
-  
-#----------------------------------------------------------------------------------------------------------------#
-   
-    def balanced_accuracy_score_test(self):      
-        return(balanced_accuracy_score(self.y_test, self.svm_pred_test))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def top_k_accuracy_score_test(self):
-        self.Error_analysis_test()
-        return(top_k_accuracy_score(self.y_test, self.svm_pred_test, k=2))
-   
-#----------------------------------------------------------------------------------------------------------------#
-  
-    def jaccard_score_test(self):
-        self.Error_analysis_test()
-        return(jaccard_score(self.y_test, self.svm_pred_test))
- 
-#----------------------------------------------------------------------------------------------------------------#
-
-    metrics_function_test_list = [accuracy_test,recall_score_test,precision_score_test,f1_score_test,f2_score_test,
-        cohen_kappa_score_test,roc_auccuracy_score_test,false_positive_rate_test,false_negative_rate_test,
-        true_negative_rate_test,negative_predictive_value_test,false_discovery_rate_test,matthews_corr_test,
-        avg_precision_test,log_loss_test,brier_score_loss_test,binary_ks_curve_test,balanced_accuracy_score_test,
-        top_k_accuracy_score_test,jaccard_score_test]
-
     def test_score(self):
-        self.Error_analysis_test()
-        test_score = [func(self) for func in err_cluster.metrics_function_test_list]
+        x = self.x_test
+        y = self.y_test
+        self.Error_analysis(x,y)
+        test_score = [func(self,x,y) for func in err_cluster.metrics_function_test_list]
         index = [func.__name__ for func in err_cluster.metrics_function_test_list]
         score_df2 = pd.DataFrame({"index":index ,"score" :test_score })
-        self.svm_conf_mat_test.to_csv('./result/confusion_matrix_test.csv')
+        self.model_conf_mat.to_csv('./result/confusion_matrix_test.csv')
         score_df2.to_csv('./result/score_test.csv')
+        print('-------- test score --------')
+        print(tabulate(score_df2, headers = 'keys', tablefmt = 'psql'), '\n')
  
 #----------------------------------------------------------------------------------------------------------------#
 
     def false_negative(self):
-        self.Error_analysis_test()
-        self.Error_analysis_train()
+        
         fig, ax = plt.subplots(figsize = (10, 5))
         index = np.arange(self.optimum_number_of_cluster)
         bar_width = 0.35
-        rects1 = plt.bar(index, self.per_error_train, bar_width, color='orange', label='train')
-        rects2 = plt.bar(index + bar_width, self.per_error_test, bar_width, color='navy',label='test')
+
+        self.Error_analysis(self.x_train, self.y_train)
+        per_error_train = self.per_error
+        rects1 = plt.bar(index, per_error_train, bar_width, color='orange', label='train')
+
+        self.Error_analysis(self.x_test, self.y_test)
+        per_error_test = self.per_error
+        rects2 = plt.bar(index + bar_width, per_error_test, bar_width, color='navy',label='test')
+
         plt.xlabel('clusters')
         plt.ylabel('% # False Negative / # all_real_fraud ')
         plt.title(' % (False Negative /  all_real_fraud) in clusters')
@@ -427,7 +286,9 @@ class err_cluster(cluster):
         plt.legend()
         plt.tight_layout()
         plt.savefig("./result/false_negative_plot.jpg") 
-        df_fn = pd.DataFrame({'train' : self.per_error_train, 'test' : self.per_error_test})
+        df_fn = pd.DataFrame({'train' : per_error_train, 'test' : per_error_test})
         df_fn.to_csv('./result/false_negative.csv')
+        print('-------- false negative --------')
+        print(tabulate(df_fn, headers = 'keys', tablefmt = 'psql'))
 
 #----------------------------------------------------------------------------------------------------------------#

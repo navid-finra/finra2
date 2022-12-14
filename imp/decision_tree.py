@@ -12,20 +12,31 @@ from sklearn.model_selection import train_test_split
 #----------------------------------------------------------------------------------------------------------------#
 
 class decision_tree_class(err_cluster):
+    def __init__(self,x_train,x_test,y_train,y_test,model):
+        
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
+        
+        self.Error_analysis(self.x_train, self.y_train)
+        model_pred = self.model_pred
+        self.model_pred = model_pred
+        self.Error_analysis(self.x_test, self.y_test)
+        model_pred_test = self.model_pred
+        self.model_pred_test = model_pred_test
 
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)
+
    
   
     def decision_tree(self): 
-        self.Error_analysis_test()
-        self.Error_analysis_train()
         train_df =  pd.concat([self.x_train.reset_index(drop =True), self.y_train.reset_index(drop =True)], axis=1)
-        svm_df_train = pd.DataFrame(self.svm_pred, columns = ['pred_label']).reset_index(drop =True)
-        train_df = pd.concat([train_df, svm_df_train], axis=1)
+        model_df_train = pd.DataFrame(self.model_pred, columns = ['pred_label']).reset_index(drop =True)
+        train_df = pd.concat([train_df, model_df_train], axis=1)
         test_df =  pd.concat([self.x_test.reset_index(drop =True), self.y_test.reset_index(drop =True)], axis=1)
-        svm_df_test = pd.DataFrame(self.svm_pred_test, columns = ['pred_label']).reset_index(drop =True)
-        test_df = pd.concat([test_df, svm_df_test], axis=1)
+        model_df_test = pd.DataFrame(self.model_pred_test, columns = ['pred_label']).reset_index(drop =True)
+        test_df = pd.concat([test_df, model_df_test], axis=1)
         new_df = pd.concat([train_df, test_df], axis=0).reset_index(drop =True)
         new_df['fn_error'] = None
         for r in range(len(new_df)) :

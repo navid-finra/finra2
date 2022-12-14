@@ -1,9 +1,8 @@
 #----------------------------------------------------------------------------------------------------------------#
-from finra_classes_main import finra
-#----------------------------------------------------------------------------------------------------------------#
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from tabulate import tabulate
 #----------------------------------------------------------------------------------------------------------------#
 from sklearn.decomposition import PCA
 from psynlig import pca_residual_variance
@@ -13,10 +12,16 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.metrics.cluster import homogeneity_score
 #----------------------------------------------------------------------------------------------------------------#
 
-class feature_redundancy(finra):
+class feature_redundancy:
+    def __init__(self,x_train,x_test,y_train,y_test,model):
 
-    def __init__(self, df, train_split_index, labels_column, model):
-        super().__init__(df, train_split_index, labels_column, model)
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.model = model
+        self.df = pd.concat([self.x_train, self.x_test])
+
 
   
     def pca(self):
@@ -30,7 +35,7 @@ class feature_redundancy(finra):
 
 #----------------------------------------------------------------------------------------------------------------#
    
-    def pireson_correlation(self):
+    def pearson_correlation(self):
         def pearson_correlation1():
             for i in range(len(self.x_train.columns.tolist())):
                 for j in range (i+1,len(self.x_train.columns.tolist())):
@@ -56,20 +61,33 @@ class feature_redundancy(finra):
         prs_corr = pd.DataFrame({'feature 1' : feature_1 , 'feature 2' : feature_2 ,
                                  'pearson correlation coefficient' : correlation_coefficient})
         prs_corr = prs_corr.sort_values(by=['pearson correlation coefficient'], ascending=False)
-        prs_corr.to_csv('./result/pireson_correlation.csv')
+        prs_corr.to_csv('./result/pearson_correlation.csv')
+
+        print("---------------------------------------- Pearson Correlation ----------------------------------------")
+        print(tabulate(prs_corr, headers = 'keys', tablefmt = 'psql'))
 
 #----------------------------------------------------------------------------------------------------------------#
   
     def VIF(self):
         #gather features
+        temp_df = self.x_train.join(self.y_train)
         features = "+".join(self.x_train.columns.tolist())
         # get y and X dataframes based on this regression:
-        y, X = dmatrices(f'{self.labels_column} ~' + features, self.df, return_type='dataframe')
+        y, X = dmatrices(f'{temp_df.columns[-1]} ~' + features, temp_df, return_type='dataframe')
         # For each X, calculate VIF and save in dataframe
         vif = pd.DataFrame()
         vif["VIF Factor"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
         vif["features"] = X.columns
         vif = vif[['features','VIF Factor']].dropna()
+        
+        for i in range(len(vif)):
+            if vif['VIF Factor'].iloc[i] > 5:
+                print(f'{vif.features.iloc[i]} is highly correlated')
+            elif vif['VIF Factor'].iloc[i] == 1:
+                print(f'{vif.features.iloc[i]} is not correlated')
+            else:
+                print(f'{vif.features.iloc[i]} is moderately correlated')
+
         vif.round(1).to_csv('./result/VIF.csv')
   
 #----------------------------------------------------------------------------------------------------------------#
@@ -77,9 +95,10 @@ class feature_redundancy(finra):
     def eigen_vals(self):
         C = np.cov(np.array(self.df), rowvar=False)
         eigvals, _ = np.linalg.eig(C)
-        eigen_vals = pd.DataFrame(data = eigvals.round(2) , index = self.df.columns , columns = ['eigenvalue'])
-        eigen_vals['condition_index'] = (eigvals.max()/eigen_vals.eigenvalue)**(1/2)
-        eigen_vals.to_csv('./result/eigen_vals.csv')
+        eigen_values = pd.DataFrame(data = eigvals.round(2) , index = self.df.columns , columns = ['eigenvalue'])
+        eigen_values['condition_index'] = (eigvals.max()/eigen_values.eigenvalue)**(1/2)
+        eigen_values.to_csv('./result/eigen_vals.csv')
+        print(eigen_values)
     
 #----------------------------------------------------------------------------------------------------------------#
       
@@ -110,5 +129,8 @@ class feature_redundancy(finra):
                                  'homogeneity correlation coefficient' : correlation_coefficient})
         homogeneity_corr = homogeneity_corr.sort_values(by=['homogeneity correlation coefficient'], ascending=False).reset_index(drop=True)
         homogeneity_corr.to_csv('./result/Homogeneity_Correlation.csv')
+        
+        print("-------------------- Homogeneity Correlation --------------------")
+        print(tabulate(homogeneity_corr, headers = 'keys', tablefmt = 'psql'))
 
 #----------------------------------------------------------------------------------------------------------------#
