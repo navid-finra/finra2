@@ -12,6 +12,11 @@ import shap
 from PyALE import ale
 import eli5
 from eli5.sklearn import PermutationImportance
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.linear_model import LogisticRegression
+
 
 plt.style.use('fivethirtyeight')
 
@@ -107,8 +112,8 @@ class Analysis:
         e = shap.KernelExplainer(model, self.X_train_scale)
         shap_values = e.shap_values(self.X_test_scale)
 
-        shaply_df = pd.DataFrame(shap_values[0], columns = self.X_train_scale.columns)
-        feature_names = self.X_train_scale.columns
+        shaply_df = pd.DataFrame(shap_values[0], columns = self.X_test_scale.columns)
+        feature_names = self.X_test_scale.columns
 
         vals = np.abs(shaply_df.values).mean(0)
 
@@ -117,6 +122,45 @@ class Analysis:
         shap_importance.sort_values(by=['feature_importance_vals'],
                                ascending=False, inplace=True)
 
-        shap_importance.to_csv('./feat_imp_plots/shaply_importance.csv')
+        shap_importance.to_csv('./feat_imp_plots/shap_importance.csv')
+
+    def global_surrogate(self):
+
+        feature_names = self.X_test_scale.columns
+        model = load_model(self.model_dirc)
+        new_target = model.predict(self.X_test_scale)
+
+        # defining the interpretable decision tree model
+        dt_model = DecisionTreeRegressor(max_depth=5, random_state=10)
+        dt_model.fit(self.X_train_scale,new_target)
+        dt_importances = pd.DataFrame({'feature': feature_names,'importance':np.round(dt_model.feature_importances_,3)})
+        dt_importances = dt_importances.sort_values('importance',ascending=False).reset_index(drop = True)
+        dt_importances.iloc[:15, :].to_csv('./feat_imp_plots/Global_Surrogate_DT_Importance.csv')  
+
+
+        forest = RandomForestClassifier(random_state=0)
+        forest.fit(self.X_train_scale, new_target)
+        forest_importances = pd.DataFrame({'feature': feature_names,'importance':np.round(forest.feature_importances_,3)})
+        forest_importances = forest_importances.sort_values('importance',ascending=False).reset_index(drop = True)
+        forest_importances.iloc[:15, :].to_csv('./feat_imp_plots/Global_Surrogate_Forest_Importances.csv')
+        
+        
+        xgb_classifier = XGBClassifier()
+        xgb_classifier.fit(self.X_train_scale, new_target)
+        xgb_importances = pd.DataFrame({'feature': feature_names,'importance':np.round(xgb_classifier.feature_importances_,3)})
+        xgb_importances = xgb_importances.sort_values('importance',ascending=False).reset_index(drop = True)
+        xgb_importances.iloc[:15, :].to_csv('./feat_imp_plots/Global_Surrogate_XGB_Importances.csv')
 
     
+        ridge_logit = LogisticRegression(C=1, penalty='l2')
+        ridge_logit.fit(self.X_train_scale, new_target)
+        ridge_importances = pd.DataFrame({'feature': feature_names,'importance':np.round(ridge_logit.coef_[0],3)})
+        ridge_importances = ridge_importances.sort_values('importance',ascending=False).reset_index(drop = True)
+        ridge_importances.iloc[:15, :].to_csv('./feat_imp_plots/Global_Surrogate_Ridge_Importances.csv')
+
+
+
+
+
+
+
