@@ -74,33 +74,21 @@ class Cluster:
                 optimum_number_of_cluster = normalize_slope.index([x for x in normalize_slope if x<0.02][0])
                 km = KMeans(n_clusters = optimum_number_of_cluster, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
                 cluster_group = km.fit_predict(data).tolist()
+                test_cluster = km.fit_predict(self.x_test).tolist()
+                train_cluster = km.fit_predict(self.x_train).tolist()
+                test_cluster_list = []
+                train_cluster_list = []
+
+                for i in range (optimum_number_of_cluster):
+                    test_cluster_list.append(round(test_cluster.count(i)/len(self.x_test),2))
+                    train_cluster_list.append(round(train_cluster.count(i)/len(self.x_train),2))
+
+                cluster_df = pd.DataFrame({'train':train_cluster_list, 'test':test_cluster_list})
+                cluster_df.to_csv('./result/Percentage_Per_Cluster.csv')
+                
                 return cluster_group
             except:
                 print('The tolerance value is very low, please increase the tolerance')   
 
 
-    def df_info(self, df, labels_column) :
-        
-        ind = []
-        val = []
-        ind.append('features')
-        val.append(df.drop(columns = labels_column).shape[1])
-        ind.append('targets')
-        val.append(df[labels_column].shape[1])
-        ind.append('samples')
-        val.append(len(df))
-        ind.append('dimention')
-        val.append(str(df.shape))
-        ind.append('duplicated')
-        val.append(df.duplicated().sum())
-        ind.append('missing_values')
-        val.append(df.isnull().sum().sum())
-        ind.append('class_a_samples')
-        val.append(df.groupby(labels_column).size()[0])
-        ind.append('class_b_samples')
-        val.append(df.groupby(labels_column).size()[1])
-        ind.append('balance(class_a / class_b)')
-        val.append(df.groupby(labels_column).size()[0] / df.groupby(labels_column).size()[1])
-        rep_df = pd.DataFrame({"ind" : ind, "val" : val})
-        return(rep_df)   
 #----------------------------------------------------------------------------------------------------------------#
