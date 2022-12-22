@@ -16,7 +16,8 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
-
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
 
 plt.style.use('fivethirtyeight')
 
@@ -157,6 +158,12 @@ class Analysis:
         ridge_importances = pd.DataFrame({'feature': feature_names,'importance':np.round(ridge_logit.coef_[0],3)})
         ridge_importances = ridge_importances.sort_values('importance',ascending=False).reset_index(drop = True)
         ridge_importances.iloc[:15, :].to_csv('./feat_imp_plots/Global_Surrogate_Ridge_Importances.csv')
+
+
+        kf = KFold(n_splits=4, random_state=1, shuffle=True)
+        scores = np.round(cross_val_score(dt_model, np.array(self.X_train_scale), np.array(self.y_train), scoring='accuracy', cv=kf, n_jobs=-1),2)
+        print('k-fold cross validation score for k=4 :', list(scores))
+
 
 
 
