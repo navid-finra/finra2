@@ -2,10 +2,12 @@
 import os
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 #----------------------------------------------------------------------------------------------------------------#
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 from sklearn import preprocessing
+from sklearn.metrics import recall_score, precision_score, roc_auc_score
 #----------------------------------------------------------------------------------------------------------------#
 
 try :
@@ -56,7 +58,7 @@ class Cluster:
         mms = MinMaxScaler()
         mms.fit(data)
         data_transformed = mms.transform(data)
-        if np.isnan(data_transformed).sum()>0:
+        if np.isnan(data_transformed).sum() > 0:
             print(f'the combine data contains {np.isnan(data_transformed).sum()} nan values')
         else:
             Sum_of_squared_distances = []
@@ -74,21 +76,104 @@ class Cluster:
                 optimum_number_of_cluster = normalize_slope.index([x for x in normalize_slope if x<0.02][0])
                 km = KMeans(n_clusters = optimum_number_of_cluster, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
                 cluster_group = km.fit_predict(data).tolist()
-                test_cluster = km.fit_predict(self.x_test).tolist()
-                train_cluster = km.fit_predict(self.x_train).tolist()
-                test_cluster_list = []
-                train_cluster_list = []
-
-                for i in range (optimum_number_of_cluster):
-                    test_cluster_list.append(round(test_cluster.count(i)/len(self.x_test),2))
-                    train_cluster_list.append(round(train_cluster.count(i)/len(self.x_train),2))
-
-                cluster_df = pd.DataFrame({'train':train_cluster_list, 'test':test_cluster_list})
-                cluster_df.to_csv('./result/Percentage_Per_Cluster.csv')
-                
+                self.optimum = optimum_number_of_cluster
                 return cluster_group
             except:
                 print('The tolerance value is very low, please increase the tolerance')   
 
+
+    def Percentage_Per_Cluster(self):
+        self.number_of_cluster()
+
+        km = KMeans(n_clusters = self.optimum, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 42)
+        test_cluster = km.fit_predict(self.x_test).tolist()
+        train_cluster = km.fit_predict(self.x_train).tolist()
+        test_cluster_list = []
+        train_cluster_list = []
+
+        for i in range(self.optimum):
+            test_cluster_list.append(test_cluster.count(i))
+            train_cluster_list.append(round(train_cluster.count(i)))
+
+        X_test = self.x_test.copy()
+        X_test['target'] = self.y_test
+        X_test['cluster'] = test_cluster
+
+
+        fig = plt.subplots(figsize =(12, 8))
+        barWidth = 0.25
+
+        br1 = np.arange(self.optimum)
+        br2 = [x + barWidth for x in br1]
+
+        plt.bar(br1, train_cluster_list, color ='r', width = barWidth,
+            edgecolor ='black', label ='train')
+
+        plt.bar(br2, test_cluster_list, color ='b', width = barWidth,
+            edgecolor ='black', label ='test')
+
+        plt.xlabel('clusters')
+        plt.ylabel('samples per cluster')
+
+        plt.legend()
+
+        max_train_test = max(max(test_cluster_list), max(train_cluster_list))
+
+        for i in range(self.optimum):
+            xtemp = X_test[X_test.cluster == i].reset_index(drop = True)
+            ytemp = xtemp.target
+            xtemp = xtemp.drop(['target', 'cluster'], axis = 1)
+            
+            model_predict = self.model.predict(xtemp)
+            
+            plt.text(
+                x = i + barWidth/2, y = (max_train_test*(1-0.4)), 
+                s = f'roc_auc:{round(roc_auc_score(ytemp, model_predict),2)}',
+                color = 'white', ha='center', fontsize = 15,
+                bbox = dict(facecolor = 'g', alpha = 0.9)
+                    )
+            
+            plt.text(
+                x = i + barWidth/2, y = (max_train_test*(1-0.4))-(max_train_test*0.1), 
+                s = f'precision:{round(precision_score(ytemp, model_predict),2)}',
+                color = 'white', ha='center', fontsize = 15,
+                bbox = dict(facecolor = 'g', alpha = 0.9)
+                    )
+
+            plt.text(
+                x = i + barWidth/2, y = (max_train_test*(1-0.4))-(max_train_test*0.2), 
+                s = f'recall:{round(recall_score(ytemp, model_predict),2)}',
+                color = 'white', ha='center', fontsize = 15,
+                bbox = dict(facecolor = 'g', alpha = 0.9)
+                    )
+            
+            plt.text(
+                x = i + barWidth, y = test_cluster_list[i] + (max_train_test*0.01), 
+                s = test_cluster_list[i],
+                color = 'black', ha='center', fontsize = 10
+                    )
+            
+            plt.text(
+                x = i, y = train_cluster_list[i] + (max_train_test*0.01), 
+                s = train_cluster_list[i],
+                color = 'black', ha='center', fontsize = 10
+                    )
+            
+            plt.text(
+                x = i + barWidth, y = test_cluster_list[i] - (max_train_test*0.03), 
+                s = f'{round(test_cluster_list[i]/sum(test_cluster_list),2)}%',
+                color = 'white', ha='center', fontsize = 10
+                    )
+            
+            plt.text(
+                x = i, y = train_cluster_list[i] - (max_train_test*0.03), 
+                s = f'{round(train_cluster_list[i]/sum(train_cluster_list),2)}%',
+                color = 'white', ha='center', fontsize = 10
+                    )
+
+        plt.xticks(br1 + 0.5*barWidth, list(range(self.optimum)))    
+        
+        plt.tight_layout()
+        plt.savefig("./result/samples_per_cluster.png")
 
 #----------------------------------------------------------------------------------------------------------------#
