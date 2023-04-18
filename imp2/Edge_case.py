@@ -1,5 +1,4 @@
 #----------------------------------------------------------------------------------------------------------------#
-import logging
 import pandas as pd
 #----------------------------------------------------------------------------------------------------------------#
 
@@ -9,56 +8,31 @@ class  Edge_case:
         self.data = data
 
     def edge_case_analysis(self):
-        model = self.data.model
-        x_train = self.data.x_train
-        x_test = self.data.x_test
+        epsilon_up_list = []
+        epsilon_down_list = []
+        data_mean = round(self.data.x_test.mean(),2)/100
+        y_predict = self.data.model.predict(self.data.x_test)
 
-        binary_feats = [col for col in x_train if 
-                    x_train[col].dropna().value_counts().index.isin([0,1]).all()]
+        temp_up = 0
+        temp_down = 0
 
-        num_feats = x_train.drop(columns = binary_feats).columns
-        #  epsilon for edge case
-        eps = 0.1
-        edge_df = pd.DataFrame()
-        for c in range(len(num_feats)):    
-            pred_label = model.predict(x_test).tolist()
+        for j in range(1,101):
+            x_epsilon = self.data.x_test.copy()
+            epsilon_up = x_epsilon + (j * data_mean)
+            epsilon_down = x_epsilon - (j * data_mean)
+            y_up = self.data.model.predict(epsilon_up)
+            y_down = self.data.model.predict(epsilon_down)
+            df_up = pd.DataFrame(data = {'y_up':y_up , 'y_pred':y_predict})
+            df_down = pd.DataFrame(data = {'y_down':y_down , 'y_pred':y_predict})
+            diff_up = df_up[df_up.y_up != df_up.y_pred].shape[0]
+            diff_down = df_down[df_down.y_down != df_down.y_pred].shape[0]
+            epsilon_up_list.append(diff_up - temp_up)
+            epsilon_down_list.append(diff_down - temp_down)
+            temp_up = diff_up
+            temp_down = diff_down
 
-            # value + epsilon
-            x_up = x_test.copy()
-            x_up.loc[:, num_feats[c]] = x_up.loc[:, num_feats[c]] +  x_up.loc[:, num_feats[c]] * eps
-            pred_up = model.predict(x_up).tolist()
-
-            # value - epsilon
-            x_dwn = x_test.copy()
-            x_dwn.loc[:, num_feats[c]] = x_dwn.loc[:, num_feats[c]] -  x_dwn.loc[:, num_feats[c]] * eps
-            pred_dwn = model.predict(x_dwn).tolist()
-
-            df_ = pd.DataFrame({ 'pred_label' : pred_label, 'pred_label_up' : pred_up, 'pred_label_down' : pred_dwn })
-            df_['features'] = num_feats[c]
-            edge_df = pd.concat([edge_df, df_], axis = 0)
-
-        edge_df['edge_case_up'] = edge_df['pred_label'] != edge_df['pred_label_up']
-        edge_df['edge_case_down'] = edge_df['pred_label'] != edge_df['pred_label_down']
-        print(f'all_edge_cases = {round((sum(edge_df.edge_case_up) + sum(edge_df.edge_case_down)) / (x_test.shape[0] * x_test.shape[1]),3) } %')
-        edge_df_pos = edge_df[edge_df.pred_label == 1]
-        print(f'pos_edge_cases = {round((sum(edge_df_pos.edge_case_up) + sum(edge_df_pos.edge_case_down)) / ((edge_df_pos.shape[0] * edge_df_pos.shape[1])+0.1),3) } %')
-        edge_df_neg = edge_df[edge_df.pred_label == 0]
-        print(f'neg_edge_cases = {round((sum(edge_df_neg.edge_case_up) + sum(edge_df_neg.edge_case_down)) / ((edge_df_neg.shape[0] * edge_df_neg.shape[1])+0.01),3) } %\n\n\n')
-
-        up_edge_cases_features = pd.DataFrame(edge_df[edge_df.edge_case_up == True].groupby("features").size(), columns = ['#']).sort_values('#', ascending=False)
-        print(f'up_edge_cases_features : \n{up_edge_cases_features}\n\n\n')
-
-        down_edge_cases_features = pd.DataFrame(edge_df[edge_df.edge_case_down == True].groupby("features").size(), columns = ['#']).sort_values('#', ascending=False)
-        print(f'down_edge_cases_features : \n{down_edge_cases_features}')
-
-        edge_df.to_csv('./edge_case_df.csv')
-        up_edge_cases_features.to_csv('./up_edge_cases_features.csv')
-        down_edge_cases_features.to_csv('./down_edge_cases_features.csv')
-
-        print(f'all_edge_cases = {(sum(edge_df.edge_case_up) + sum(edge_df.edge_case_down)) / ((x_test.shape[0] * x_test.shape[1])+0.01) } %')
-        print(f'pos_edge_cases = {(sum(edge_df_pos.edge_case_up) + sum(edge_df_pos.edge_case_down)) / ((edge_df_pos.shape[0] * edge_df_pos.shape[1])+0.01) } %')
-        print(f'neg_edge_cases = {(sum(edge_df_neg.edge_case_up) + sum(edge_df_neg.edge_case_down)) / ((edge_df_neg.shape[0] * edge_df_neg.shape[1])+0.01) } %\n\n\n')
-        return down_edge_cases_features, up_edge_cases_features
+        print('pos_edge_cases =', round((self.data.x_test.shape[0] - sum(epsilon_up_list))/(self.data.x_test.shape[0]),2))
+        print('neg_edge_cases =', round((self.data.x_test.shape[0] - sum(epsilon_down_list))/(self.data.x_test.shape[0]),2), '\n\n\n')
         
 
 #----------------------------------------------------------------------------------------------------------------#
