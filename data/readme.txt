@@ -1,1 +1,0 @@
-kdd dataset is availabe on the google drive.
