@@ -4,35 +4,44 @@ import pandas as pd
 
 class  Edge_case:
     def __init__(self, data):
-        
         self.data = data
 
     def edge_case_analysis(self):
-        epsilon_up_list = []
-        epsilon_down_list = []
-        data_mean = round(self.data.x_test.mean(),2)/100
-        y_predict = self.data.model.predict(self.data.x_test)
+        try:
+            num_feats = self.data.x_test.columns
+        except:
+            num_feats = pd.DataFrame(self.data.x_test).columns
 
-        temp_up = 0
-        temp_down = 0
+        up = self.data.x_test.copy()
+        down = self.data.x_test.copy()
+        y_predict = model.predict(self.data.x_test).reshape(1,-1)[0]
+        y_predict = np.array([int(round(x)) for x in y_predict])
+        mean_x = self.data.x_test.mean()/100
 
         for j in range(1,101):
-            x_epsilon = self.data.x_test.copy()
-            epsilon_up = x_epsilon + (j * data_mean)
-            epsilon_down = x_epsilon - (j * data_mean)
-            y_up = self.data.model.predict(epsilon_up)
-            y_down = self.data.model.predict(epsilon_down)
-            df_up = pd.DataFrame(data = {'y_up':y_up , 'y_pred':y_predict})
-            df_down = pd.DataFrame(data = {'y_down':y_down , 'y_pred':y_predict})
-            diff_up = df_up[df_up.y_up != df_up.y_pred].shape[0]
-            diff_down = df_down[df_down.y_down != df_down.y_pred].shape[0]
-            epsilon_up_list.append(diff_up - temp_up)
-            epsilon_down_list.append(diff_down - temp_down)
-            temp_up = diff_up
-            temp_down = diff_down
+            for i in num_feats:
+                up[i] += mean_x[i] * j
+                down[i] -= mean_x[i] * j
+                up_pre = self.data.model.predict(up).reshape(1,-1)[0]
+                up_pre = np.array([int(round(x)) for x in up_pre])
+                up_arr = (up_pre == y_predict) + 0
 
-        print('pos_edge_cases =', round((self.data.x_test.shape[0] - sum(epsilon_up_list))/(self.data.x_test.shape[0]),2))
-        print('neg_edge_cases =', round((self.data.x_test.shape[0] - sum(epsilon_down_list))/(self.data.x_test.shape[0]),2), '\n\n\n')
-        
+                down_pre = self.data.model.predict(down).reshape(1,-1)[0]
+                down_pre = np.array([int(round(x)) for x in down_pre])
+                down_arr = (down_pre == y_predict) + 0
 
+                up['y_pred'] = y_predict
+                up['predict'] = down_arr + up_arr
+                up = up[up['predict'] == 2]
+                y_predict = up['y_pred']
+                up = up.drop(['y_pred','predict'], axis = 1)
+
+                down['y_pred'] = y_predict
+                down['predict'] = down_arr + up_arr
+                down = down[down['predict'] == 2]
+                down = down.drop(['y_pred','predict'], axis = 1)
+            up -= mean_x * j
+            down += mean_x * j
+
+        print('Robustness =', round(up.shape[0]/self.data.x_test.shape[0],2),'%')
 #----------------------------------------------------------------------------------------------------------------#
