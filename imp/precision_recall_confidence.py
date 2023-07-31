@@ -25,7 +25,7 @@ class Precision_Recall_Confidence:
             
         #confidence interval
         alpha = 1-limit
-        z_score = norm.isf(alpha * 0.5) 
+        z_score = st.norm.isf(alpha * 0.5) 
         variance_of_sum = p_hat * (1-p_hat) / n
         std = variance_of_sum ** 0.5
         upper_bound = round(p_hat - z_score * std, 2)
