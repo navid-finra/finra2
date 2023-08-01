@@ -1,4 +1,4 @@
-#----------------------------------------------------------------------------------------------------------------#
+.#----------------------------------------------------------------------------------------------------------------#
 import pandas as pd
 #----------------------------------------------------------------------------------------------------------------#
 
@@ -14,7 +14,7 @@ class  Robustness:
 
         up = self.data.x_test.copy()
         down = self.data.x_test.copy()
-        y_predict = model.predict(self.data.x_test).reshape(1,-1)[0]
+        y_predict = self.data.model.predict(self.data.x_test).reshape(1,-1)[0]
         y_predict = np.array([int(round(x)) for x in y_predict])
         mean_x = self.data.x_test.mean()/100
         zero_mean = pd.DataFrame((mean_x == 0), columns = ['bool'])
@@ -34,10 +34,10 @@ class  Robustness:
                     break
             
                 else:
-                    up_pre = model.predict(up).reshape(1,-1)[0]
+                    up_pre = self.data.model.predict(up).reshape(1,-1)[0]
                     up_pre = np.array([int(round(x)) for x in up_pre])
                     up_arr = (up_pre == y_predict) + 0
-                    down_pre = model.predict(down).reshape(1,-1)[0]
+                    down_pre = self.data.model.predict(down).reshape(1,-1)[0]
                     down_pre = np.array([int(round(x)) for x in down_pre])
                     down_arr = (down_pre == y_predict) + 0
                     up['y_pred'] = y_predict
