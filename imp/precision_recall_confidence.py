@@ -28,8 +28,8 @@ class Precision_Recall_Confidence:
         z_score = st.norm.isf(alpha * 0.5) 
         variance_of_sum = p_hat * (1-p_hat) / n
         std = variance_of_sum ** 0.5
-        upper_bound = round(p_hat - z_score * std, 2)
-        lower_bound = round(p_hat + z_score * std, 2)
+        upper_bound = round(p_hat - z_score * std, 3)
+        lower_bound = round(p_hat + z_score * std, 3)
         
         return prob, upper_bound, lower_bound 
         
