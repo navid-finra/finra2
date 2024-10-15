@@ -1,5 +1,6 @@
-.#----------------------------------------------------------------------------------------------------------------#
+#----------------------------------------------------------------------------------------------------------------#
 import pandas as pd
+import numpy as np
 #----------------------------------------------------------------------------------------------------------------#
 
 class  Robustness:
@@ -11,11 +12,17 @@ class  Robustness:
             num_feats = self.data.x_test.columns
         except:
             num_feats = pd.DataFrame(self.data.x_test).columns
-
-        up = self.data.x_test.copy()
-        down = self.data.x_test.copy()
+        if 'cluster' in num_feats:
+            try:
+                self.data.x_test = self.data.x_test[num_feats[:-2]]
+            except:
+                self.data.x_test = self.data.x_test[:,:-2]
+            
+        
+        up = self.data.x_test.astype('float').copy()
+        down = self.data.x_test.astype('float').copy()
         y_predict = self.data.model.predict(self.data.x_test).reshape(1,-1)[0]
-        y_predict = np.array([int(round(x)) for x in y_predict])
+        y_predict = np.array([int(np.round(x)) for x in y_predict])
         mean_x = self.data.x_test.mean()/100
         zero_mean = pd.DataFrame((mean_x == 0), columns = ['bool'])
         zero_mean = zero_mean.index[zero_mean['bool']==True].tolist()
@@ -35,10 +42,10 @@ class  Robustness:
             
                 else:
                     up_pre = self.data.model.predict(up).reshape(1,-1)[0]
-                    up_pre = np.array([int(round(x)) for x in up_pre])
+                    up_pre = np.array([int(np.round(x)) for x in up_pre])
                     up_arr = (up_pre == y_predict) + 0
                     down_pre = self.data.model.predict(down).reshape(1,-1)[0]
-                    down_pre = np.array([int(round(x)) for x in down_pre])
+                    down_pre = np.array([int(np.round(x)) for x in down_pre])
                     down_arr = (down_pre == y_predict) + 0
                     up['y_pred'] = y_predict
                     down['y_pred'] = y_predict
@@ -52,14 +59,12 @@ class  Robustness:
                     down = down.drop(['y_pred','predict'], axis = 1)
         
             else:
-        
                 continue
-            
             break
                 
             up -= mean_x * j
             down += mean_x * j
         
             
-        print('Robustness =', round(up.shape[0]/X_test.shape[0],2),'%')
+        print('Robustness =', np.round(up.shape[0]/self.data.x_test.shape[0],2),'%')
 #----------------------------------------------------------------------------------------------------------------#
